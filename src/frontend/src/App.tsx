@@ -715,6 +715,7 @@ export default function App() {
       <ProfileSheet
         open={profileSheetOpen}
         onOpenChange={setProfileSheetOpen}
+        onLogout={handleLogout}
       />
 
       {/* Delete Confirmation */}
