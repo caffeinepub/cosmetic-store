@@ -35,16 +35,20 @@ export enum UserRole {
 }
 export interface backendInterface {
     addProduct(name: string, brand: string, category: Category, description: string, price: number, imageUrl: string, stockQuantity: bigint): Promise<bigint>;
+    addToWishlist(productId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteProduct(id: bigint): Promise<void>;
     filterByCategory(category: Category): Promise<Array<Product>>;
     getAllProducts(): Promise<Array<Product>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getProduct(id: bigint): Promise<Product>;
+    getCallerWishlist(): Promise<Array<Product>>;
+    getProduct(id: bigint): Promise<Product | null>;
     getProductsSortedByPrice(ascending: boolean): Promise<Array<Product>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    isProductInWishlist(productId: bigint): Promise<boolean>;
+    removeFromWishlist(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchProducts(searchTerm: string): Promise<Array<Product>>;
     updateProduct(id: bigint, name: string, brand: string, category: Category, description: string, price: number, imageUrl: string, stockQuantity: bigint): Promise<void>;

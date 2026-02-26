@@ -49,6 +49,9 @@ import {
   useIsCallerAdmin,
   useGetCallerUserProfile,
   useSaveCallerUserProfile,
+  useGetCallerWishlist,
+  useAddToWishlist,
+  useRemoveFromWishlist,
   Category,
   type Product,
 } from "./hooks/useQueries";
@@ -211,11 +214,11 @@ export default function App() {
   const isLoggingIn = loginStatus === "logging-in";
 
   // Admin status via real backend query
-  const adminQuery = useIsCallerAdmin();
+  const adminQuery = useIsCallerAdmin(isAuthenticated);
   const isAdmin = isAuthenticated && (adminQuery.data ?? false);
 
   // User profile
-  const profileQuery = useGetCallerUserProfile();
+  const profileQuery = useGetCallerUserProfile(isAuthenticated);
   const saveProfile = useSaveCallerUserProfile();
 
   // Show profile setup only after we know the user is logged in and has no profile
@@ -242,6 +245,19 @@ export default function App() {
   const addProduct = useAddProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+
+  // Wishlist
+  const wishlistQuery = useGetCallerWishlist(isAuthenticated);
+  const addToWishlist = useAddToWishlist();
+  const removeFromWishlist = useRemoveFromWishlist();
+
+  // Set of wishlisted product IDs for O(1) lookups
+  const wishlistedIds = useMemo<Set<string>>(() => {
+    const items = wishlistQuery.data ?? [];
+    return new Set(items.map((p) => p.id.toString()));
+  }, [wishlistQuery.data]);
+
+  const wishlistCount = wishlistQuery.data?.length ?? 0;
 
   // Seed on first load
   useEffect(() => {
@@ -397,6 +413,22 @@ export default function App() {
     setAdminSheetOpen(true);
   };
 
+  const handleWishlistToggle = useCallback(async (product: Product) => {
+    if (!isAuthenticated) return;
+    const isWishlisted = wishlistedIds.has(product.id.toString());
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist.mutateAsync(product.id);
+        toast.success(`Removed from wishlist`);
+      } else {
+        await addToWishlist.mutateAsync(product.id);
+        toast.success(`Added to wishlist`);
+      }
+    } catch {
+      toast.error("Failed to update wishlist");
+    }
+  }, [isAuthenticated, wishlistedIds, addToWishlist, removeFromWishlist]);
+
   const isFormPending = addProduct.isPending || updateProduct.isPending;
 
   // Display name for logged-in user
@@ -458,7 +490,7 @@ export default function App() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="font-body text-xs gap-1.5 border-border hover:bg-secondary"
+                  className="font-body text-xs gap-1.5 border-border hover:bg-secondary relative"
                   onClick={() => setProfileSheetOpen(true)}
                   aria-label="Open profile"
                 >
@@ -466,6 +498,11 @@ export default function App() {
                   {displayName && (
                     <span className="hidden sm:inline max-w-[100px] truncate">
                       {displayName}
+                    </span>
+                  )}
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-body font-600 leading-none">
+                      {wishlistCount > 9 ? "9+" : wishlistCount}
                     </span>
                   )}
                 </Button>
@@ -643,6 +680,9 @@ export default function App() {
                     product={product}
                     onClick={handleProductClick}
                     animationClass={`stagger-${Math.min(i + 1, 6) as 1 | 2 | 3 | 4 | 5 | 6}`}
+                    isWishlisted={wishlistedIds.has(product.id.toString())}
+                    onWishlistToggle={handleWishlistToggle}
+                    isAuthenticated={isAuthenticated}
                   />
                 ))}
               </div>
@@ -716,6 +756,7 @@ export default function App() {
         open={profileSheetOpen}
         onOpenChange={setProfileSheetOpen}
         onLogout={handleLogout}
+        isAuthenticated={isAuthenticated}
       />
 
       {/* Delete Confirmation */}

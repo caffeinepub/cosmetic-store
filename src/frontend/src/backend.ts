@@ -118,16 +118,20 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addProduct(name: string, brand: string, category: Category, description: string, price: number, imageUrl: string, stockQuantity: bigint): Promise<bigint>;
+    addToWishlist(productId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deleteProduct(id: bigint): Promise<void>;
     filterByCategory(category: Category): Promise<Array<Product>>;
     getAllProducts(): Promise<Array<Product>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getProduct(id: bigint): Promise<Product>;
+    getCallerWishlist(): Promise<Array<Product>>;
+    getProduct(id: bigint): Promise<Product | null>;
     getProductsSortedByPrice(ascending: boolean): Promise<Array<Product>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
+    isProductInWishlist(productId: bigint): Promise<boolean>;
+    removeFromWishlist(productId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     searchProducts(searchTerm: string): Promise<Array<Product>>;
     updateProduct(id: bigint, name: string, brand: string, category: Category, description: string, price: number, imageUrl: string, stockQuantity: bigint): Promise<void>;
@@ -160,6 +164,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.addProduct(arg0, arg1, to_candid_Category_n1(this._uploadFile, this._downloadFile, arg2), arg3, arg4, arg5, arg6);
+            return result;
+        }
+    }
+    async addToWishlist(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addToWishlist(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addToWishlist(arg0);
             return result;
         }
     }
@@ -247,18 +265,32 @@ export class Backend implements backendInterface {
             return from_candid_UserRole_n11(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getProduct(arg0: bigint): Promise<Product> {
+    async getCallerWishlist(): Promise<Array<Product>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCallerWishlist();
+                return from_candid_vec_n5(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCallerWishlist();
+            return from_candid_vec_n5(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getProduct(arg0: bigint): Promise<Product | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getProduct(arg0);
-                return from_candid_Product_n6(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getProduct(arg0);
-            return from_candid_Product_n6(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async getProductsSortedByPrice(arg0: boolean): Promise<Array<Product>> {
@@ -300,6 +332,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.isCallerAdmin();
+            return result;
+        }
+    }
+    async isProductInWishlist(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isProductInWishlist(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isProductInWishlist(arg0);
+            return result;
+        }
+    }
+    async removeFromWishlist(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeFromWishlist(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeFromWishlist(arg0);
             return result;
         }
     }
@@ -357,6 +417,9 @@ function from_candid_UserRole_n11(_uploadFile: (file: ExternalBlob) => Promise<U
 }
 function from_candid_opt_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
     return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Product]): Product | null {
+    return value.length === 0 ? null : from_candid_Product_n6(_uploadFile, _downloadFile, value[0]);
 }
 function from_candid_record_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: bigint;

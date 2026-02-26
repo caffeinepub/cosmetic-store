@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Heart, Loader2 } from "lucide-react";
 import { type Product, Category } from "../hooks/useQueries";
 
 // Category badge colors
@@ -34,12 +36,35 @@ interface ProductCardProps {
   onClick: (product: Product) => void;
   className?: string;
   animationClass?: string;
+  isWishlisted?: boolean;
+  onWishlistToggle?: (product: Product) => Promise<void>;
+  isAuthenticated?: boolean;
 }
 
-export function ProductCard({ product, onClick, className = "", animationClass = "" }: ProductCardProps) {
+export function ProductCard({
+  product,
+  onClick,
+  className = "",
+  animationClass = "",
+  isWishlisted = false,
+  onWishlistToggle,
+  isAuthenticated = false,
+}: ProductCardProps) {
   const catStyle = CATEGORY_STYLES[product.category] ?? CATEGORY_STYLES[Category.skincare];
   const isLowStock = Number(product.stockQuantity) <= 10;
   const isOutOfStock = Number(product.stockQuantity) === 0;
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
+
+  const handleWishlistClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated || !onWishlistToggle || isTogglingWishlist) return;
+    setIsTogglingWishlist(true);
+    try {
+      await onWishlistToggle(product);
+    } finally {
+      setIsTogglingWishlist(false);
+    }
+  };
 
   return (
     <button
@@ -67,6 +92,42 @@ export function ProductCard({ product, onClick, className = "", animationClass =
         >
           {catStyle.label}
         </span>
+
+        {/* Wishlist heart button */}
+        <button
+          type="button"
+          onClick={handleWishlistClick}
+          aria-label={isWishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          title={
+            !isAuthenticated
+              ? "Login to save to wishlist"
+              : isWishlisted
+              ? "Remove from wishlist"
+              : "Save to wishlist"
+          }
+          className={`
+            absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center
+            backdrop-blur-sm transition-all duration-200
+            ${isAuthenticated
+              ? isWishlisted
+                ? "bg-rose-50/90 text-rose-500 shadow-sm hover:bg-rose-100/90 hover:scale-110"
+                : "bg-white/70 text-muted-foreground hover:text-rose-400 hover:bg-white/90 hover:scale-110"
+              : "bg-white/50 text-muted-foreground/40 cursor-not-allowed"
+            }
+          `}
+          disabled={!isAuthenticated || isTogglingWishlist}
+        >
+          {isTogglingWishlist ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Heart
+              className={`w-3.5 h-3.5 transition-all duration-200 ${
+                isWishlisted ? "fill-rose-500 text-rose-500 scale-110" : ""
+              }`}
+            />
+          )}
+        </button>
+
         {/* Stock badge */}
         {isOutOfStock && (
           <span className="absolute top-3 right-3 text-[10px] font-body tracking-wider uppercase px-2.5 py-1 rounded-full bg-destructive/15 text-destructive backdrop-blur-sm">

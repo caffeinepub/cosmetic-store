@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useActor } from "./useActor";
 import { Category, type Product, type UserProfile } from "../backend.d";
-import { createActorWithConfig } from "../config";
 
 export { Category };
 export type { Product, UserProfile };
@@ -67,7 +66,7 @@ export function useSearchProducts(searchTerm: string) {
 
 // ── Auth Queries ─────────────────────────────────────────────────────────────
 
-export function useIsCallerAdmin() {
+export function useIsCallerAdmin(isAuthenticated = false) {
   const { actor, isFetching } = useActor();
   return useQuery<boolean>({
     queryKey: ["auth", "isAdmin"],
@@ -75,11 +74,11 @@ export function useIsCallerAdmin() {
       if (!actor) return false;
       return actor.isCallerAdmin();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && isAuthenticated,
   });
 }
 
-export function useGetCallerUserProfile() {
+export function useGetCallerUserProfile(isAuthenticated = false) {
   const { actor, isFetching: actorFetching } = useActor();
   const query = useQuery<UserProfile | null>({
     queryKey: ["currentUserProfile"],
@@ -87,21 +86,22 @@ export function useGetCallerUserProfile() {
       if (!actor) throw new Error("Actor not available");
       return actor.getCallerUserProfile();
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && isAuthenticated,
     retry: false,
   });
   return {
     ...query,
     isLoading: actorFetching || query.isLoading,
-    isFetched: !!actor && query.isFetched,
+    isFetched: !!actor && isAuthenticated && query.isFetched,
   };
 }
 
 export function useSaveCallerUserProfile() {
   const queryClient = useQueryClient();
+  const { actor } = useActor();
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
-      const actor = await createActorWithConfig();
+      if (!actor) throw new Error("Not authenticated");
       return actor.saveCallerUserProfile(profile);
     },
     onSuccess: () => {
@@ -114,6 +114,7 @@ export function useSaveCallerUserProfile() {
 
 export function useAddProduct() {
   const queryClient = useQueryClient();
+  const { actor } = useActor();
   return useMutation({
     mutationFn: async (params: {
       name: string;
@@ -124,7 +125,7 @@ export function useAddProduct() {
       imageUrl: string;
       stockQuantity: bigint;
     }) => {
-      const actor = await createActorWithConfig();
+      if (!actor) throw new Error("Not authenticated");
       return actor.addProduct(
         params.name,
         params.brand,
@@ -143,6 +144,7 @@ export function useAddProduct() {
 
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
+  const { actor } = useActor();
   return useMutation({
     mutationFn: async (params: {
       id: bigint;
@@ -154,7 +156,7 @@ export function useUpdateProduct() {
       imageUrl: string;
       stockQuantity: bigint;
     }) => {
-      const actor = await createActorWithConfig();
+      if (!actor) throw new Error("Not authenticated");
       return actor.updateProduct(
         params.id,
         params.name,
@@ -174,13 +176,56 @@ export function useUpdateProduct() {
 
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
+  const { actor } = useActor();
   return useMutation({
     mutationFn: async (id: bigint) => {
-      const actor = await createActorWithConfig();
+      if (!actor) throw new Error("Not authenticated");
       return actor.deleteProduct(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+// ── Wishlist Queries ──────────────────────────────────────────────────────────
+
+export function useGetCallerWishlist(isAuthenticated: boolean) {
+  const { actor, isFetching } = useActor();
+  return useQuery<Product[]>({
+    queryKey: ["wishlist"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getCallerWishlist();
+    },
+    enabled: !!actor && !isFetching && isAuthenticated,
+  });
+}
+
+export function useAddToWishlist() {
+  const queryClient = useQueryClient();
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: async (productId: bigint) => {
+      if (!actor) throw new Error("Not authenticated");
+      return actor.addToWishlist(productId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+    },
+  });
+}
+
+export function useRemoveFromWishlist() {
+  const queryClient = useQueryClient();
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: async (productId: bigint) => {
+      if (!actor) throw new Error("Not authenticated");
+      return actor.removeFromWishlist(productId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
   });
 }

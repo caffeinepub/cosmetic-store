@@ -13,14 +13,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, UserCircle2, LogOut, ShieldCheck, Calendar, User } from "lucide-react";
-import { useGetCallerUserProfile, useSaveCallerUserProfile } from "@/hooks/useQueries";
-import { useIsCallerAdmin } from "@/hooks/useQueries";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, UserCircle2, LogOut, ShieldCheck, Calendar, User, Heart, Trash2 } from "lucide-react";
+import {
+  useGetCallerUserProfile,
+  useSaveCallerUserProfile,
+  useIsCallerAdmin,
+  useGetCallerWishlist,
+  useRemoveFromWishlist,
+} from "@/hooks/useQueries";
 
 interface ProfileSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onLogout?: () => void;
+  isAuthenticated?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -30,11 +37,13 @@ function getInitials(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
-export function ProfileSheet({ open, onOpenChange, onLogout }: ProfileSheetProps) {
+export function ProfileSheet({ open, onOpenChange, onLogout, isAuthenticated = false }: ProfileSheetProps) {
   const queryClient = useQueryClient();
-  const profileQuery = useGetCallerUserProfile();
-  const adminQuery = useIsCallerAdmin();
+  const profileQuery = useGetCallerUserProfile(isAuthenticated);
+  const adminQuery = useIsCallerAdmin(isAuthenticated);
   const saveProfile = useSaveCallerUserProfile();
+  const wishlistQuery = useGetCallerWishlist(isAuthenticated);
+  const removeFromWishlist = useRemoveFromWishlist();
 
   const currentName = profileQuery.data?.name ?? "";
   const isAdmin = adminQuery.data ?? false;
@@ -82,6 +91,16 @@ export function ProfileSheet({ open, onOpenChange, onLogout }: ProfileSheetProps
   };
 
   const isDirty = nameInput.trim() !== currentName && nameInput.trim() !== "";
+  const wishlistItems = wishlistQuery.data ?? [];
+
+  const handleRemoveFromWishlist = async (productId: bigint) => {
+    try {
+      await removeFromWishlist.mutateAsync(productId);
+      toast.success("Removed from wishlist");
+    } catch {
+      toast.error("Failed to remove from wishlist");
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -99,6 +118,85 @@ export function ProfileSheet({ open, onOpenChange, onLogout }: ProfileSheetProps
         </SheetHeader>
 
         <Separator className="my-5 bg-border" />
+
+        {/* Wishlist section */}
+        <div className="mb-1">
+          <div className="flex items-center gap-2 mb-3">
+            <Heart className="w-4 h-4 text-rose-400" />
+            <p className="font-body text-xs tracking-wider uppercase text-muted-foreground">
+              Wishlist
+            </p>
+            {wishlistItems.length > 0 && (
+              <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-rose-100 text-rose-500 text-[10px] font-body font-600">
+                {wishlistItems.length}
+              </span>
+            )}
+          </div>
+
+          {wishlistQuery.isLoading ? (
+            <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-background border border-border">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              <span className="font-body text-xs text-muted-foreground">Loading wishlist...</span>
+            </div>
+          ) : wishlistItems.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-5 rounded-lg bg-background border border-border border-dashed">
+              <Heart className="w-6 h-6 text-muted-foreground/40" />
+              <p className="font-body text-xs text-muted-foreground text-center">
+                No saved products yet
+              </p>
+              <p className="font-body text-[10px] text-muted-foreground/60 text-center">
+                Tap the heart on any product to save it
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="max-h-48 rounded-lg">
+              <div className="space-y-1.5 pr-1">
+                {wishlistItems.map((item) => (
+                  <div
+                    key={item.id.toString()}
+                    className="flex items-center gap-3 rounded-lg px-2.5 py-2 bg-background border border-border group/wishitem hover:border-rose-200 transition-colors"
+                  >
+                    {/* Product image */}
+                    <div className="w-10 h-10 rounded-md overflow-hidden shrink-0 bg-petal">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.onerror = null;
+                          target.src =
+                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect fill='%23f9e8ef' width='40' height='40'/%3E%3C/svg%3E";
+                        }}
+                      />
+                    </div>
+                    {/* Product info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body text-xs text-foreground font-500 truncate leading-snug">
+                        {item.name}
+                      </p>
+                      <p className="font-display text-xs text-primary font-600">
+                        ${item.price.toFixed(2)}
+                      </p>
+                    </div>
+                    {/* Remove button */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFromWishlist(item.id)}
+                      aria-label={`Remove ${item.name} from wishlist`}
+                      disabled={removeFromWishlist.isPending}
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover/wishitem:opacity-100 shrink-0"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+
+        <Separator className="my-4 bg-border" />
 
         {/* Avatar + role badge */}
         <div
