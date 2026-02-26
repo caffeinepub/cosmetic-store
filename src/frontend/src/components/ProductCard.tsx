@@ -151,7 +151,7 @@ export function ProductCard({
         </h3>
         <div className="flex items-center justify-between mt-3">
           <span className="font-display text-lg font-600 text-primary">
-            ${product.price.toFixed(2)}
+            ₹{product.price.toFixed(2)}
           </span>
           <span className="text-xs text-muted-foreground font-body">
             {Number(product.stockQuantity)} in stock

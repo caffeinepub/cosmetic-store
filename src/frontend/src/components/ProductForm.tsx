@@ -180,7 +180,7 @@ export function ProductForm({ initialProduct, onSubmit, onCancel, isPending }: P
         {/* Price */}
         <div className="space-y-1.5">
           <Label htmlFor="pf-price" className={labelClass}>
-            Price (USD) *
+            Price (INR) *
           </Label>
           <Input
             id="pf-price"
@@ -190,7 +190,7 @@ export function ProductForm({ initialProduct, onSubmit, onCancel, isPending }: P
             className={inputClass}
             value={form.price}
             onChange={(e) => setField("price", e.target.value)}
-            placeholder="45.00"
+            placeholder="999.00"
           />
           {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
         </div>

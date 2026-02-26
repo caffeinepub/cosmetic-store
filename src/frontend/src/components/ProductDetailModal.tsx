@@ -69,7 +69,7 @@ export function ProductDetailModal({
 
             <div className="flex items-center gap-3 mb-4">
               <span className="font-display text-3xl font-600 text-primary">
-                ${product.price.toFixed(2)}
+                ₹{product.price.toFixed(2)}
               </span>
               {isOutOfStock && (
                 <span className="text-xs tracking-wider uppercase px-2.5 py-1 rounded-full bg-destructive/15 text-destructive">
